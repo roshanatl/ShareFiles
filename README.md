@@ -25,3 +25,5 @@ Uploading OCRImageToText.war
 
 
 http://ocrsmartreader.herokuapp.com/rest/abzoobaParse/parseText
+
+http://wvwea006c0841.homeoffice.wal-mart.com:9090/ocr/
