@@ -1,0 +1,125 @@
+<dependency>
+			<groupId>org.bytedeco</groupId>
+			<artifactId>javacv</artifactId>
+			<version>1.2</version>
+		</dependency>
+		
+		
+		import static org.bytedeco.javacpp.opencv_core.*;
+import static org.bytedeco.javacpp.opencv_imgproc.*;
+import static org.bytedeco.javacpp.opencv_imgcodecs.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.bytedeco.javacpp.ARToolKitPlus.MarkerPoint;
+
+public class SimpleSample {
+    public static void smooth(String filename) { 
+        IplImage image = cvLoadImage(filename);
+        IplImage outImage = cvLoadImage("Out-"+filename);
+        if (image != null) {
+        	//cvtColor(image,outImage,CV_BGR2GRAY);
+            cvSmooth(image, image);
+            cvSaveImage("Smooth-"+filename, image);
+            cvReleaseImage(image);
+        }
+    }
+    public static void binaryImage(String fileName){
+    	IplImage img = cvLoadImage(fileName);
+    	  CvSize sz = cvSize(img.width(), img.height());
+          IplImage gry = cvCreateImage(sz, img.depth(), 1);
+          cvCvtColor(img, gry, CV_BGR2GRAY);
+          cvAdaptiveThreshold(gry, gry,255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV, 5, 4);
+          cvSaveImage("Binary-"+fileName, gry);
+
+         cvReleaseImage(img);
+         cvReleaseImage(gry);
+    	
+    }
+    public static void main (String args[]){
+    	String fileName="Club-Lego-300x169.jpg";
+    	//binaryImage(fileName);
+    	//fileName="Binary-"+fileName;
+    	//smooth(fileName);
+    	//fileName="Smooth-"+fileName;
+    	invertImage(fileName);
+    	//processImage(fileName);
+    }
+	private static void invertImage(String fileName) {
+		
+		Mat src = imread(fileName, CV_LOAD_IMAGE_GRAYSCALE);
+		Mat dst = new Mat();
+		//double threshold =threshold(src, dst, 100,200,THRESH_BINARY);
+		double threshold =threshold(src, dst, 0, 255, THRESH_OTSU);
+		imwrite("Inv-1-"+fileName, dst);
+		//Mat dst1 = new Mat();
+		
+		//normalize(dst, dst1,new Double(0), new Double(255),NORM_L2,-1);
+		//imwrite("Inv-2-"+fileName, dst1);
+  	
+	}
+	private static void processImage(String fileName){
+//		Mat im = imread(fileName, 0);
+//		// apply Otsu threshold
+//		Mat bw = new Mat(im.size(), CV_8U);
+//		threshold(im, bw, 0, 255, THRESH_BINARY_INV |THRESH_OTSU);
+//		imwrite("Step1-"+fileName, bw);
+////		// take the distance transform
+////		Mat dist = new Mat(im.size(), CV_32F);
+////		distanceTransform(bw, dist, CV_DIST_L2, CV_DIST_MASK_PRECISE);
+////		imwrite("Step2-"+fileName, dist);
+//		// threshold the distance transform
+//		Mat dibw32f = new Mat(im.size(), CV_32F);
+//		final double SWTHRESH = 8.0;    // stroke width threshold
+//		threshold(bw, dibw32f, SWTHRESH/2.0, 255, THRESH_BINARY);
+//		imwrite("Step3-"+fileName, dibw32f);
+//		Mat dibw8u = new Mat(im.size(), CV_8U);
+//		dibw32f.convertTo(dibw8u, CV_8U);
+//
+//		Mat kernel = getStructuringElement(MORPH_RECT, new Size(3, 3));
+//		imwrite("Step4-"+fileName, kernel);
+//		// open to remove connections to stray elements
+//		Mat cont = new Mat(im.size(), CV_8U);
+//		morphologyEx(dibw8u, cont, MORPH_OPEN, kernel);
+//		imwrite("Step5-"+fileName, cont);
+//		// find contours and filter based on bounding-box height
+//		final double HTHRESH = im.rows() * 0.5; // bounding-box height threshold
+//		List<MarkerPoint> contours = new ArrayList<MarkerPoint>();
+//		List<Point> digits = new ArrayList<Point>();    // contours of the possible digits
+//		findContours(cont, contours, new Mat(), RETR_CCOMP, CHAIN_APPROX_SIMPLE);
+//		for (int i = 0; i < contours.size(); i++)
+//		{
+//		    if (Imgproc.boundingRect(contours.get(i)).height > HTHRESH)
+//		    {
+//		        // this contour passed the bounding-box height threshold. add it to digits
+//		        digits.addAll(contours.get(i).toList());
+//		    }   
+//		}
+//		// find the convexhull of the digit contours
+//		MatOfInt digitsHullIdx = new MatOfInt();
+//		MatOfPoint hullPoints = new MatOfPoint();
+//		hullPoints.fromList(digits);
+//		Imgproc.convexHull(hullPoints, digitsHullIdx);
+//		// convert hull index to hull points
+//		List<Point> digitsHullPointsList = new ArrayList<Point>();
+//		List<Point> points = hullPoints.toList();
+//		for (Integer i: digitsHullIdx.toList())
+//		{
+//		    digitsHullPointsList.add(points.get(i));
+//		}
+//		MatOfPoint digitsHullPoints = new MatOfPoint();
+//		digitsHullPoints.fromList(digitsHullPointsList);
+//		// create the mask for digits
+//		List<MatOfPoint> digitRegions = new ArrayList<MatOfPoint>();
+//		digitRegions.add(digitsHullPoints);
+//		Mat digitsMask = Mat.zeros(im.size(), CvType.CV_8U);
+//		Imgproc.drawContours(digitsMask, digitRegions, 0, new Scalar(255, 255, 255), -1);
+//		// dilate the mask to capture any info we lost in earlier opening
+//		Imgproc.morphologyEx(digitsMask, digitsMask, Imgproc.MORPH_DILATE, kernel);
+//		// cleaned image ready for OCR
+//		Mat cleaned = Mat.zeros(im.size(), CvType.CV_8U);
+//		dibw8u.copyTo(cleaned, digitsMask);
+//		// feed cleaned to Tesseract
+	}
+}
