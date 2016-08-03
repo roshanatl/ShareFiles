@@ -1,0 +1,161 @@
+package org.EasyBuy.EasyBuyServices.utill;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.GeneralSecurityException;
+import java.util.Collection;
+import java.util.List;
+
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.io.FileUtils;
+import org.apache.http.auth.AUTH;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.json.JsonFactory;
+import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.services.storage.StorageScopes;
+import com.google.api.services.vision.v1.Vision;
+import com.google.api.services.vision.v1.VisionScopes;
+import com.google.api.services.vision.v1.model.AnnotateImageRequest;
+import com.google.api.services.vision.v1.model.AnnotateImageResponse;
+import com.google.api.services.vision.v1.model.BatchAnnotateImagesRequest;
+import com.google.api.services.vision.v1.model.BatchAnnotateImagesResponse;
+import com.google.api.services.vision.v1.model.Feature;
+import com.google.api.services.vision.v1.model.Image;
+import com.google.api.services.vision.v1.model.ImageSource;
+import com.google.common.collect.ImmutableList;
+
+public class GVision {
+	private static final String APPLICATION_NAME = "ust-smart-ocr";
+	private static final int MAX_RESULTS = 6;
+	private final Logger logger = LoggerFactory.getLogger(this.getClass());
+	private Vision vision;
+
+	public GVision() {
+		vision = authenticateGoogleAPI();
+	}
+
+	/**
+	 * Connects to the Vision API using Application Default Credentials.
+	 */
+	private Vision authenticateGoogleAPI() {
+		try {
+			InputStream resourceAsStream = AUTH.class.getClassLoader().getResourceAsStream("USTSmartOCR-bc067713a664.json");
+
+			GoogleCredential credential = GoogleCredential.fromStream(resourceAsStream);
+			if (credential.createScopedRequired()) {
+			      Collection<String> scopes = StorageScopes.all();
+			      credential = credential.createScoped(scopes);
+			    }
+			//GoogleCredential credential = GoogleCredential.getApplicationDefault().createScoped(VisionScopes.all());
+			JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
+			return new Vision.Builder(GoogleNetHttpTransport.newTrustedTransport(), jsonFactory, credential)
+					.setApplicationName(APPLICATION_NAME)
+					.build();
+		} catch (IOException e) {
+			logger.error("Unable to access Google Vision API", e);
+		} catch (GeneralSecurityException e) {
+			logger.error("Unable to authenticate with Google Vision API", e);
+		}
+		return vision;
+	}
+
+	/**
+	 * Gets up to {@code maxResults} text for an image stored at
+	 * {@code uri}.
+	 */
+	public List doOCR(File file) throws Exception {
+
+		if (vision == null)
+			authenticateGoogleAPI();
+		Base64 base64 = new Base64();
+		byte[] encoded =base64.encode(FileUtils.readFileToByteArray(file));
+		
+		FileInputStream fileInputStream=null;
+        
+       // File file = new File("C:\\testing.txt");
+        
+        byte[] bFile = new byte[(int) file.length()];
+        
+        
+	    fileInputStream = new FileInputStream(file);
+	    fileInputStream.read(bFile);
+	    fileInputStream.close();
+	    
+		AnnotateImageRequest request = new AnnotateImageRequest()
+			.setImage(new Image().encodeContent(bFile))
+			.setFeatures(ImmutableList.of(new Feature().setType("TEXT_DETECTION").setMaxResults(MAX_RESULTS),
+					new Feature().setType("LOGO_DETECTION").setMaxResults(MAX_RESULTS),
+					new Feature().setType("LABEL_DETECTIONA").setMaxResults(MAX_RESULTS)));
+		Vision.Images.Annotate annotate;
+		try {
+			
+			annotate = vision.images()
+					.annotate(new BatchAnnotateImagesRequest().setRequests(ImmutableList.of(request)));
+			BatchAnnotateImagesResponse batchResponse = annotate.execute();
+			assert batchResponse.getResponses().size() == 1;
+			AnnotateImageResponse response = batchResponse.getResponses().get(0);
+			if (response.getError() != null) {
+				logger.error("Failed to process document ["+file.getName()+"]");
+				logger.error(response.getError().getMessage());
+				throw new Exception(response.getError().getMessage());
+			} else {
+				
+				ObjectMapper objectMapper = new ObjectMapper();
+				objectMapper.writeValue(
+					    new FileOutputStream("output.json"), response);
+				return response.getTextAnnotations();				
+			}
+		} catch (IOException e) {
+			logger.error("Failed to process document ["+file.getName()+"]",e);
+			throw e;
+		}
+	}
+	public static void main (String args[]){
+		GVision gvision = new GVision();
+		try {
+			File myFile  = new File("LEGO-City-60011-Surfer-Rescue-Toy-cover.jpg");
+			gvision.doOCR(myFile);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+}
+
+<dependency>
+			<groupId>com.google.apis</groupId>
+			<artifactId>google-api-services-vision</artifactId>
+			<version>v1-rev22-1.22.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.apis</groupId>
+			<artifactId>google-api-services-storage</artifactId>
+			<version>v1-rev78-1.22.0</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.commons/commons-io -->
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>1.3.2</version>
+		</dependency>
+{
+  "type": "service_account",
+  "project_id": "ust-smart-ocr",
+  "private_key_id": "bc067713a6643ae2d8b23ea0790a5767fc9fb0ab",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDCsj2CVF3xfdfs\nBiOT/lfezRdfiuk5VkWIA8Df2AYtbMpPpmraTfkoZMnf5p+iZtShh3APgJCMSubi\ngopi7r0qWKq5NPsGYCbU8ZG+cMeC5etE/TSIgtmA7Ov+ElAuTvFKOwXuRMfSYaFd\nCv7l4NNX500so4UbPDn3NmgFpFF0mBmT/aM1nUQ0nyG7t9NobxUVgddR6HMgwf/u\nW3QULD0P55sGkDDJawqmWSTk/4VtjrHeWlh3m3uHlYZp36ZEkjJmi+JpQQ3dw+mH\ny8SBDNCGq70iy5I700/QBg44s/U0U2z56zb2tbOYWM3HLLpUo6eeEqR/+WWQQTCH\nMlTfvc/rAgMBAAECggEBAJhsCCF/QSitF5yM1c+nwE0KDPFcg+fCdZ7dKWNU8Mkh\nMWWX6HFNt/D6rtyd5X2zuWVX7dAFG6TpgsXz4rk/JFMBpW5nXtqH7f6pvCr2igsd\nSsnw3O6+Wd9IHB0FY0ZNwTMW8DawHCvFCRoZYKLBF1PrHg0DW1KOHOc/7cH0+Vwn\n1SZdtA26NT17pOHQNbO3/eLIYDPxogG0r6PC8GyJt7bHvrSv+H5BmaTqRw/s3JQu\nENgN6e8pWPBSnGNk/YP/YDh5O+CxjlQdgAeBYs4NcUMbtLb3XeFnkv56FoqWZpqg\nlXAg/48a1ukYynlwjaoUgz7QFj85yOKtP/iSno/UymECgYEA7bNpGH6pw88Hy0MK\niSdTQ2zjhq2lpC5N8HGqzERV96XSeAXpU+b/LAGEJc1/ro2AQnqDZKpekE4ohu19\nVCCPgXVm7l+3hAyff3uGjx1rsYTsw4kEuE86tjsKuwiTlOz+8KrNhOsC2RQOLNLn\nDRxJdGi264eX/29w0fjRf+zE0fsCgYEA0a9MiQVizdn9DaqP7IFvjlNUkbbMTSG2\nDQUd91VSg+a8GbHgx+g71y/Xhrox2tTtKh6Bed28sPpKO2plD4KNsInfdjShSeHZ\nIsbfkH3ZLWn5LJxYko86m/8k+5kAqVIi8Zw/ZEH7s4YIzGb46qI0isdfGaWJ1sAh\nXKLVIhNfhtECgYEAzCEr2t5DuiVcAyGitaAw8BFd37XWLwWY5ykmTV9OGGuuMGab\nNvOEJW1z5+bvhJ5+DBkcJ2Hr7a9BPIZM/+cqdjm1WHaYqe0RODCDoPnaF0wY698K\nT6GywPY5Q9+cpeNVGKcF8eTEwFlpxvKje23UYwTeOaxrSvCQCbHNcDeL2usCgYAi\nM9fmGczOCxqt2f5z84EA1DLdOdYFVtRdN1J1/6LgBQj1oAAsW4M3TIR5Y3GyYjz1\nO9ieyj53F7x4CJjHeOInw7WBkIAmjwJeG9ZnuT9tmvWcAzynW1mSDII5z/E9rTop\n8vScI+8sj1ZsEPfVPfQYFwE6K7haISjP9XeSgVp5oQKBgEVq5hw9pDWdbLpeVX4j\nCppQB20wOgZcCdT0NkOd6u693x9qfCwDrVl9SmZkxPA3dFGxcsWI1lZsljo0qJJy\nB+ZAz74lrYGU11FX/Y7oNopq9XDRHFRnDxo3DY6e+mSFvq2EP1J06dSXUFUiumRh\nrt7wsTTFF0szEkef9euKYP+A\n-----END PRIVATE KEY-----\n",
+  "client_email": "ust-smart-ocr-account@ust-smart-ocr.iam.gserviceaccount.com",
+  "client_id": "104322699356119124404",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://accounts.google.com/o/oauth2/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/ust-smart-ocr-account%40ust-smart-ocr.iam.gserviceaccount.com"
+}
+ USTSmartOCR-bc067713a664.json 
