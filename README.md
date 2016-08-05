@@ -27,3 +27,5 @@ Uploading OCRImageToText.war
 http://ocrsmartreader.herokuapp.com/rest/abzoobaParse/parseText
 
 http://wvwea006c0841.homeoffice.wal-mart.com:9090/ocr/
+
+http://websystique.com/springmvc/spring-mvc-4-file-upload-example-using-commons-fileupload/
