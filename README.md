@@ -22,7 +22,7 @@ Uploading OCRImageToText.war
        - size: 57MB
 -----> Uploading build...
 
-
+https://app.box.com/s/zchimqmqijolscamcsava9sib2s9u58t
 
 http://ocrsmartreader.herokuapp.com/rest/abzoobaParse/parseText
 
