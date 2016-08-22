@@ -29,3 +29,4 @@ http://ocrsmartreader.herokuapp.com/rest/abzoobaParse/parseText
 http://wvwea006c0841.homeoffice.wal-mart.com:9090/ocr/
 
 http://websystique.com/springmvc/spring-mvc-4-file-upload-example-using-commons-fileupload/
+http://stackoverflow.com/questions/27609569/file-upload-along-with-other-object-in-jersey-restful-web-service
