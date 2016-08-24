@@ -32,3 +32,5 @@ http://websystique.com/springmvc/spring-mvc-4-file-upload-example-using-commons-
 http://stackoverflow.com/questions/27609569/file-upload-along-with-other-object-in-jersey-restful-web-service
 
 https://github.com/lesstif/jira-rest-client
+
+https://confluence.walmart.com/display/EGS/Collibra+JIRA+Task+creation+from+Workflows
