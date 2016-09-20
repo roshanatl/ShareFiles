@@ -1,0 +1,67 @@
+package com.walmart.ocr.util;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.services.vision.v1.model.AnnotateImageResponse;
+import com.google.api.services.vision.v1.model.EntityAnnotation;
+import com.google.common.base.Charsets;
+import com.google.common.io.Resources;
+import com.google.gson.Gson;
+
+public class ProcessOCRText {
+
+	public static void main(String[] args) {
+		String productCreateJson;
+		try {
+			productCreateJson = Resources.toString(Resources.getResource("GVision.json"), Charsets.UTF_8);
+			JSONObject jsonObj = new JSONObject(productCreateJson);
+		
+			//System.out.println(jsonObj.toString());
+			AnnotateImageResponse annotateImageResponse = new AnnotateImageResponse();
+			ObjectMapper objectMapper = new ObjectMapper();
+			Gson gson = new Gson();
+			//annotateImageResponse=objectMapper.readValue(jsonObj.toString(), new TypeReference<AnnotateImageResponse>(){});
+			annotateImageResponse = gson.fromJson(jsonObj.toString(), AnnotateImageResponse.class);
+			//System.out.println(annotateImageResponse.getTextAnnotations());
+			List<EntityAnnotation> textWords= annotateImageResponse.getTextAnnotations();
+			
+			List<EntityAnnotation> toSortWords = new ArrayList<EntityAnnotation>();
+			for(int i=1;i< textWords.size();i++){
+				
+					System.out.println(textWords.get(i));
+					EntityAnnotation entity = new EntityAnnotation();
+					ObjectMapper mapper = new ObjectMapper();
+					 String jsonInString = mapper.writeValueAsString(textWords.get(i));
+					entity=objectMapper.convertValue(jsonInString, EntityAnnotation.class );
+					//entity.set("description", textWords.get(i).get("description"));
+					//entity.setBoundingPoly(textWords.get(i).getBoundingPoly());
+					//toSortWords.add(entity);
+			
+			}
+			
+			System.out.println("====================================");
+			 Collections.sort(textWords, new TextPolygonComparator());
+			 for(int i=1;i< textWords.size();i++){
+					
+					System.out.println(textWords.get(i));
+			
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+
+	}
+
+}
