@@ -67,6 +67,7 @@ public class NewProcessOCRText {
 		
 		//Iterate the Sentences & find its Location using 1st word .
 				List<String> sentences = Arrays.asList(fullText.split("\n"));
+				
 				Map<String,BoundingPoly> sentenceLocationMap = new LinkedHashMap<String, BoundingPoly>();
 				System.out.println("***********Sort Sentences on X*************");
 				for(String sentence:sentences){
@@ -112,16 +113,22 @@ private static String arrangeSentences(String textWithPosition,
 	int wordCount =0 ;
 	
 	StringBuilder joiner =new StringBuilder();
+	char firstChar1 ;
+	int noOfSpaces1;
+	int diffSpace;
+	
 	for(String sentence:wordBlockList){
-		char firstChar1= sentence.trim().charAt(0);
-		int noOfSpaces1 = sentence.indexOf(firstChar1);
-		int diffSpace=noOfSpaces1-noOfSpaces;
+		 firstChar1= sentence.trim().charAt(0);
+		 noOfSpaces1 = sentence.indexOf(firstChar1);
+		 diffSpace=noOfSpaces1-noOfSpaces;
 		if(diffSpace<0)
 		{
 			diffSpace=diffSpace*-1;
 		}
 		if(diffSpace <5){
 			System.out.println(sentence);
+			sentenceLocationMap.remove(sentence.trim());
+
 		}
 		wordCount++;
 		if(wordBlockList.size()==wordCount){
@@ -129,6 +136,10 @@ private static String arrangeSentences(String textWithPosition,
 			
 		}
 	
+	}
+	System.out.println("*** Remaining String ***");
+	for (Map.Entry<String, BoundingPoly> entry : sentenceLocationMap.entrySet()) {
+		System.out.println(entry.getKey());
 	}
 			
 		return joiner.toString();
@@ -264,7 +275,8 @@ private static String sortX(String processedText, AnnotateImageResponse annotate
 					if (prevStartX != 0) {
 						Integer diffInX = startX - prevStartX;
 						Integer diffInY = startY - prexStartY;
-						if (diffInY > 5 || diffInY < -5) {
+						//if (diffInY > 5 || diffInY < -5) 
+						{
 							//System.out.println("New Line -- DiffX :" + diffInY);
 							imageTestBuilder.append("\n");
 							isNewLine = true;
@@ -301,7 +313,7 @@ private static String sortX(String processedText, AnnotateImageResponse annotate
 		AnnotateImageResponse annotateImageResponse = null;
 		try {
 			productCreateJson = Resources.toString(
-					Resources.getResource("GVision.json"), Charsets.UTF_8);
+					Resources.getResource("GVision2.json"), Charsets.UTF_8);
 			JSONObject jsonObj = new JSONObject(productCreateJson);
 			Map<String, Object> jsonMap = JsonstringToMap
 					.jsonString2Map(jsonObj.toString());
