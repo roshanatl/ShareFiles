@@ -1,0 +1,373 @@
+package com.walmart.ocr.util;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
+import com.google.api.services.vision.v1.model.AnnotateImageResponse;
+import com.google.api.services.vision.v1.model.BatchAnnotateImagesResponse;
+import com.google.api.services.vision.v1.model.BoundingPoly;
+import com.google.api.services.vision.v1.model.ColorInfo;
+import com.google.api.services.vision.v1.model.EntityAnnotation;
+import com.google.api.services.vision.v1.model.ImageProperties;
+import com.walmart.ocr.model.GVisionResponse;
+import com.walmart.ocr.model.ParseRequest;
+
+public class GvisionResponseToOCRResponseConverter {
+	public static GVisionResponse convert(BatchAnnotateImagesResponse bAIR) {
+		GVisionResponse gVR = new GVisionResponse();
+		List<String> logos = new ArrayList<String>();
+		gVR.setLogoDetails(logos);
+		List<String> labels = new ArrayList<String>();
+		gVR.setLabelDetails(labels);
+		List<String> texts = new ArrayList<String>();
+		gVR.setTextDeatils(texts);
+		List<String> colors = new ArrayList<String>();
+		gVR.setColorDeatils(colors);
+
+		for (AnnotateImageResponse annotateImageResponse : bAIR.getResponses()) {
+			getLogoDeatils(annotateImageResponse, gVR);
+			getLabelDeatils(annotateImageResponse, gVR);
+			getTextDeatils(annotateImageResponse, gVR);
+			getColorDetails(annotateImageResponse, gVR);
+		}
+		return gVR;
+	}
+
+	public static GVisionResponse convertToParseequest(BatchAnnotateImagesResponse bAIR) {
+
+		GVisionResponse gVR = new GVisionResponse();
+		List<String> logos = new ArrayList<String>();
+		gVR.setLogoDetails(logos);
+		List<String> labels = new ArrayList<String>();
+		gVR.setLabelDetails(labels);
+		List<String> texts = new ArrayList<String>();
+		gVR.setTextDeatils(texts);
+		List<String> colors = new ArrayList<String>();
+		gVR.setTextDeatils(colors);
+
+		for (AnnotateImageResponse annotateImageResponse : bAIR.getResponses()) {
+			getLogoDeatils(annotateImageResponse, gVR);
+			getLabelDeatils(annotateImageResponse, gVR);
+			getTextDeatils(annotateImageResponse, gVR);
+			getColorDetails(annotateImageResponse, gVR);
+		}
+		return gVR;
+	}
+
+	private static void getColorDetails(AnnotateImageResponse annotateImageResponse, GVisionResponse gVR) {
+		ImageProperties imagePropertiesAnnotation = annotateImageResponse.getImagePropertiesAnnotation();
+		if (null != imagePropertiesAnnotation) {
+			ColorInfo colorInfo = imagePropertiesAnnotation.getDominantColors().getColors().get(0);
+			ColorUtils colorUtils = new ColorUtils();
+			String myColor = colorUtils.getColorNameFromRgb(Math.round(colorInfo.getColor().getRed()),
+					Math.round(colorInfo.getColor().getGreen()), Math.round(colorInfo.getColor().getBlue()));
+
+			gVR.getColorDeatils().add(myColor);
+		}
+	}
+
+	private static void getTextDeatils(AnnotateImageResponse annotateImageResponse, GVisionResponse gVR) {
+		StringBuilder textBuilder = new StringBuilder();
+		String processedText = null;
+		if (null != annotateImageResponse.getTextAnnotations()) {
+			// Google API gives 1st element as full test & reset with
+			// coordinates .
+			// So take only 1st element now.
+			if (null != annotateImageResponse.getTextAnnotations().get(0)) {
+				textBuilder.append(annotateImageResponse.getTextAnnotations().get(0).getDescription());
+				textBuilder.append(" ");
+			}
+			processedText=processX(textBuilder.toString(), annotateImageResponse);
+			processedText = sortX(processedText,annotateImageResponse);
+		}
+		gVR.getTextDeatils().add(processedText);
+	}
+
+	private static String sortX(String processedText, AnnotateImageResponse annotateImageResponse) {
+		
+		// Split the word blocks based on new line.
+
+		List<String> wordBlockList = Arrays.asList(processedText.split("\n"));
+		
+		Map<String, BoundingPoly> wordLocationMap = new LinkedHashMap<String, BoundingPoly>();
+		List<EntityAnnotation> worldList = annotateImageResponse.getTextAnnotations();
+		// Remove the first Word as it is full text in image,
+		worldList.remove(0);
+		// Form a Map of words & its Location
+		for (EntityAnnotation word : worldList) {
+			wordLocationMap.put(word.getDescription(), word.getBoundingPoly());
+				}
+
+		// Initialize the local variables.
+		String startWord = null;
+		
+		for (String wordBlock : wordBlockList) {
+			if (!wordBlock.isEmpty()) {
+
+				// System.out.println("wordBlock : " + wordBlock);
+				if (wordBlock.indexOf(" ") == -1) {
+					startWord = wordBlock;
+				} else {
+					startWord = wordBlock.substring(0, wordBlock.indexOf(" "));
+				}
+				// System.out.println("startWord : " + startWord);
+
+				BoundingPoly locationOfWord = wordLocationMap.get(startWord);
+				wordLocationMap.put(wordBlock, locationOfWord);
+			}
+		}
+		System.out.println("********************************************");
+		System.out.println("wordLocationMap : " + wordLocationMap);
+		System.out.println("********************************************");
+		Map<String, BoundingPoly>  sortedwordLocationMap = sortByStartX(wordLocationMap);
+		
+		System.out.println("sortedwordLocationMap : " + sortedwordLocationMap);
+		System.out.println("********************************************");
+		
+		StringBuilder sortedString = new StringBuilder(); 
+		for(Map.Entry<String, BoundingPoly> entry : sortedwordLocationMap.entrySet()){
+			sortedString.append(entry.getKey());
+			sortedString.append("\n");
+		}
+		return sortedString.toString();
+	}
+	
+	private static Map<String, BoundingPoly> sortByStartX(Map<String, BoundingPoly> unsortMap) {
+
+        // 1. Convert Map to List of Map
+        List<Map.Entry<String, BoundingPoly>> list =
+                new LinkedList<Map.Entry<String, BoundingPoly>>(unsortMap.entrySet());
+
+        // 2. Sort list with Collections.sort(), provide a custom Comparator
+        //    Try switch the o1 o2 position for a different order
+        Collections.sort(list, new Comparator<Map.Entry<String, BoundingPoly>>() {
+            public int compare(Map.Entry<String, BoundingPoly> o1,
+                               Map.Entry<String, BoundingPoly> o2) {
+            	if(null!=o1.getValue() && null != o2.getValue()){
+            		return (o2.getValue().getVertices().get(0).getX()).compareTo(o1.getValue().getVertices().get(0).getX());
+            	}
+            	else{
+            		return 0;
+            	}
+            }
+        });
+
+        // 3. Loop the sorted list and put it into a new insertion order Map LinkedHashMap
+        Map<String, BoundingPoly> sortedMap = new LinkedHashMap<String, BoundingPoly>();
+        for (Map.Entry<String, BoundingPoly> entry : list) {
+            sortedMap.put(entry.getKey(), entry.getValue());
+        }
+
+        /*
+        //classic iterator example
+        for (Iterator<Map.Entry<String, Integer>> it = list.iterator(); it.hasNext(); ) {
+            Map.Entry<String, Integer> entry = it.next();
+            sortedMap.put(entry.getKey(), entry.getValue());
+        }*/
+
+
+        return sortedMap;
+    }
+
+	private static String  processX(String string, AnnotateImageResponse annotateImageResponse) {
+		StringBuilder imageTestBuilder = new StringBuilder();
+
+		List<EntityAnnotation> worldList = annotateImageResponse.getTextAnnotations();
+		// Remove the first Word as it is full text in image,
+		worldList.remove(0);
+		Map<String, BoundingPoly> wordLocationMap = new HashMap<String, BoundingPoly>();
+		// Form a Map of words & its Location
+		for (EntityAnnotation word : worldList) {
+			wordLocationMap.put(word.getDescription(), word.getBoundingPoly());
+		}
+
+		// Split the word blocks based on new line.
+
+		List<String> wordBlockList = Arrays.asList(string.split("\n"));
+		
+		//Initialize the local variables.
+		String startWord = null;
+		Integer prevStartX = 0;
+		Integer prexStartY = 0;
+		int prevNoOfTabs = 0;
+
+		boolean isNewLine = true;
+		for (String wordBlock : wordBlockList) {
+			if (!wordBlock.isEmpty()) {
+
+				//System.out.println("wordBlock : " + wordBlock);
+				if (wordBlock.indexOf(" ") == -1) {
+					startWord = wordBlock;
+				} else {
+					startWord = wordBlock.substring(0, wordBlock.indexOf(" "));
+				}
+				//System.out.println("startWord : " + startWord);
+
+				BoundingPoly locationOfWord = wordLocationMap.get(startWord);
+				if (null != locationOfWord) {
+					Integer startX = locationOfWord.getVertices().get(0).getX();
+					Integer startY = locationOfWord.getVertices().get(1).getY();
+					//System.out.println("BoundingPoly : " + locationOfWord);
+					//System.out.println("StartX : " + startX);
+
+					if (prevStartX != 0) {
+						Integer diffInX = startX - prevStartX;
+						Integer diffInY = startY - prexStartY;
+						if (diffInY > 5 || diffInY < -5) {
+							//System.out.println("New Line -- DiffX :" + diffInY);
+							imageTestBuilder.append("\n");
+							isNewLine = true;
+						}
+					}
+
+					int noOfTabs = startX / 30;
+					//System.out.println("noOfTabs : " + noOfTabs);
+					if (!isNewLine) {
+						noOfTabs = (noOfTabs - prevNoOfTabs)/2;
+					}
+					for (int i = 0; i < noOfTabs; i++) {
+						imageTestBuilder.append("  ");
+
+					}
+
+					imageTestBuilder.append(wordBlock);
+					prevStartX = startX;
+					prexStartY = startY;
+					isNewLine = false;
+//					System.out.println("********************************************");
+//					System.out.println(imageTestBuilder.toString());
+//					System.out.println("********************************************");
+				}
+			}
+		}
+		System.out.println("********************************************");
+		System.out.println(imageTestBuilder.toString());
+		System.out.println("********************************************");
+		return imageTestBuilder.toString();
+	}
+
+	private static void getLabelDeatils(AnnotateImageResponse annotateImageResponse, GVisionResponse gVR) {
+		StringBuilder labelBuilder = new StringBuilder();
+		if (null != annotateImageResponse.getLabelAnnotations()) {
+			for (EntityAnnotation entity : annotateImageResponse.getLabelAnnotations()) {
+				labelBuilder.append(entity.getDescription());
+				labelBuilder.append(" ");
+			}
+		}
+		gVR.getLabelDetails().add(labelBuilder.toString());
+	}
+
+	private static void getLogoDeatils(AnnotateImageResponse annotateImageResponse, GVisionResponse gVR) {
+		StringBuilder logoBuilder = new StringBuilder();
+
+		if (null != annotateImageResponse.getLogoAnnotations()) {
+			for (EntityAnnotation entity : annotateImageResponse.getLogoAnnotations()) {
+				logoBuilder.append(entity.getDescription());
+				logoBuilder.append(" ");
+			}
+		}
+
+		gVR.getLogoDetails().add(logoBuilder.toString());
+	}
+
+	public static String toOCRString(GVisionResponse gVisionResponse) {
+		StringBuilder ocrStringBuilder = new StringBuilder();
+		ocrStringBuilder.append("LogoDetails: ");
+		for (String logo : gVisionResponse.getLogoDetails()) {
+			ocrStringBuilder.append(logo);
+			ocrStringBuilder.append(" ");
+		}
+		ocrStringBuilder.append("LabelDetails: ");
+		for (String label : gVisionResponse.getLabelDetails()) {
+			ocrStringBuilder.append(label);
+			ocrStringBuilder.append(" ");
+		}
+		ocrStringBuilder.append("TextDetails: ");
+		for (String text : gVisionResponse.getTextDeatils()) {
+			ocrStringBuilder.append(text);
+			ocrStringBuilder.append(" ");
+		}
+		return ocrStringBuilder.toString();
+	}
+
+	public static ParseRequest toParseRequest(GVisionResponse gVisionResponse) {
+
+		ParseRequest parseRequest = new ParseRequest();
+		StringBuilder ocrStringBuilder = new StringBuilder();
+		StringBuilder ocrStringBuilder1 = new StringBuilder();
+		int count = 1;
+		for (String logo : gVisionResponse.getLogoDetails()) {
+			if (count == 1) {
+				ocrStringBuilder.append("LogoDetails: ");
+				ocrStringBuilder.append(logo);
+				ocrStringBuilder.append(" ");
+				count = 0;
+			} else {
+				ocrStringBuilder1.append("LogoDetails: ");
+				ocrStringBuilder1.append(logo);
+				ocrStringBuilder1.append(" ");
+			}
+		}
+		count = 1;
+
+		for (String label : gVisionResponse.getLabelDetails()) {
+			if (count == 1) {
+				ocrStringBuilder.append("LabelDetails: ");
+				ocrStringBuilder.append(label);
+				ocrStringBuilder.append(" ");
+				count = 0;
+			} else {
+				ocrStringBuilder1.append("LabelDetails: ");
+				ocrStringBuilder1.append(label);
+				ocrStringBuilder1.append(" ");
+
+			}
+		}
+		count = 1;
+		for (String text : gVisionResponse.getTextDeatils()) {
+			if (count == 1) {
+				ocrStringBuilder.append("TextDetails: ");
+				ocrStringBuilder.append(text);
+				ocrStringBuilder.append(" ");
+				count = 0;
+			} else {
+				ocrStringBuilder1.append("TextDetails: ");
+				ocrStringBuilder1.append(text);
+				ocrStringBuilder1.append(" ");
+			}
+		}
+		count = 1;
+		for (String color : gVisionResponse.getColorDeatils()) {
+			if (count == 1) {
+				ocrStringBuilder.append("ColorDetails: ");
+				ocrStringBuilder.append(color);
+				ocrStringBuilder.append(" ");
+				count = 0;
+			} else {
+				ocrStringBuilder1.append("ColorDetails: ");
+				ocrStringBuilder1.append(color);
+				ocrStringBuilder1.append(" ");
+			}
+		}
+		parseRequest.setFrontText(ocrStringBuilder.toString());
+
+		String ocrString = ocrStringBuilder.toString().replace("\n", "<br/>");
+		ocrString = ocrString.replace(" ", "&nbsp;");
+		
+		parseRequest.setFrontTextToDisplay(ocrString);
+		
+		parseRequest.setBackText(ocrStringBuilder1.toString());
+		ocrString =ocrStringBuilder1.toString().replace("\n", "<br/>");
+		ocrString = ocrString.replace(" ", "&nbsp;");
+		parseRequest.setBackTextToDisplay(ocrString);
+		parseRequest.setId(Long.toHexString(Double.doubleToLongBits(Math.random())));
+		return parseRequest;
+	}
+}
