@@ -34,3 +34,6 @@ http://stackoverflow.com/questions/27609569/file-upload-along-with-other-object-
 https://github.com/lesstif/jira-rest-client
 
 https://confluence.walmart.com/display/EGS/Collibra+JIRA+Task+creation+from+Workflows
+
+HighChart
+http://jsfiddle.net/cvedovini/RjPRd/2/
