@@ -48,3 +48,12 @@ http://stackoverflow.com/questions/14090619/angularjs-how-to-deflate-and-encode-
 https://walmart.webex.com/walmart/j.php?MTID=m10440bf6bbb90ca40a5bab361850a782
 
 https://walmart.webex.com/walmart/e.php?MTID=mdaf44e3c65b8e9308a738c69cfeed848
+
+Auth :
+
+https://login.windows.net/ust-global.com/oauth2/authorize?client_id=3a8083f3-b07f-4130-b27d-e47bc4c305ac&response_type=code
+Content-Type : application/x-www-form-urlencoded
+grant_type : authorization_code
+code:
+client_id:
+client_secret:
